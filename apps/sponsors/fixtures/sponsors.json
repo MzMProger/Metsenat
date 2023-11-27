@@ -1,0 +1,17 @@
+[
+  {
+    "model": "sponsors.sponsor",
+    "pk": 1,
+    "fields": {
+      "created_at": "2023-09-23T13:02:25.088Z",
+      "updated_at": "2023-09-28T08:25:33.010Z",
+      "full_name": "Olimov Jasur",
+      "type": "legal_entity",
+      "phone_number": "+99897770707",
+      "status": "new",
+      "organization": "sample organization",
+      "payment_amount": 776000,
+      "payment_type": "cash"
+    }
+  }
+]

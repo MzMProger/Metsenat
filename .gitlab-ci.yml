@@ -1,0 +1,44 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  IMAGE: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME
+
+build-job:
+  stage: build
+  image:
+    name: docker:stable
+  services:
+    - name: docker:dind
+      alias: thedockerhost
+  variables:
+    DOCKER_HOST: tcp://thedockerhost:2375/
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY --username $CI_REGISTRY_USER --password-stdin
+    - touch .env.example
+  script:
+    - docker build -t $IMAGE:web .
+    - docker push $IMAGE:web
+  after_script:
+    - docker logout
+
+deploy-job:
+  image: alpine
+  stage: deploy
+  tags:
+    - deployment
+  variables:
+    PROJECT_WORK_DIR: "/home/ubuntu/projects/metsenat"
+  before_script:
+    - chmod og= $AWS_SECRET_KEY
+    - apk update && apk add openssh-client
+    - ssh -i $AWS_SECRET_KEY -o StrictHostKeyChecking=no $AWS_USER@$AWS_IP_ADDRESS "echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY --username $CI_REGISTRY_USER --password-stdin"
+  script:
+    - ssh -i $AWS_SECRET_KEY -o StrictHostKeyChecking=no $AWS_USER@$AWS_IP_ADDRESS "cd $PROJECT_WORK_DIR; git checkout develop; git pull origin develop;"
+    - ssh -i $AWS_SECRET_KEY -o StrictHostKeyChecking=no $AWS_USER@$AWS_IP_ADDRESS "cd $PROJECT_WORK_DIR; docker compose -f docker-compose.prod.yml pull;"
+    - ssh -i $AWS_SECRET_KEY -o StrictHostKeyChecking=no $AWS_USER@$AWS_IP_ADDRESS "cd $PROJECT_WORK_DIR; docker compose -f docker-compose.prod.yml up -d;"
+#  only:
+#    - main
